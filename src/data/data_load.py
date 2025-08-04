@@ -1,19 +1,70 @@
 import os
-import zipfile
-from pandas import read_csv, DataFrame
+from pandas import DataFrame, read_csv
 
-def load_data():
-    return read_csv("../../data/raw/Telco-Customer-Churn.csv")
+DIR_DATA = "data"
+DIR_DATA_PATH = os.path.join(os.getcwd(), DIR_DATA)
+DIR_RAW = "raw"
+DIR_RAW_PATH = os.path.join(os.getcwd(), DIR_DATA, DIR_RAW)
+DIR_PROCESSED = "processed"
+DIR_PROCESSED_PATH = os.path.join(os.getcwd(), DIR_DATA, DIR_PROCESSED)
+DATASET_NAME_NEW = 'telco-customer-churn-dataset.csv'
+
+def mk_data_dirs() -> None:
+
+    if not os.path.exists(DIR_DATA_PATH):
+
+        print(f"Nor the {DIR_DATA} directory nor it's subdirectories, {DIR_RAW} and {DIR_PROCESSED}, exists.")
+        print(f"Creating the directories: {DIR_DATA}, {DIR_RAW}, {DIR_PROCESSED}...")
+
+        os.mkdir(path=DIR_DATA_PATH)
+        os.mkdir(path=DIR_RAW_PATH)
+        os.mkdir(path=DIR_PROCESSED_PATH)
+
+        print(f"The {DIR_DATA} directory and it's subdirectories, {DIR_RAW} and {DIR_PROCESSED}, were created.")
+
+    elif not os.path.exists(DIR_RAW_PATH) and not os.path.exists(DIR_PROCESSED_PATH):
+
+        print(f"Nor {DIR_RAW} and {DIR_PROCESSED} directories exists.")
+        print(f"Creating {DIR_RAW} and {DIR_PROCESSED} directories...")
+
+        os.mkdir(path=DIR_RAW_PATH)
+        os.mkdir(path=DIR_PROCESSED_PATH)
+
+        print(f"The {DIR_RAW} directory has been created.")
+
+    elif os.path.exists(DIR_RAW_PATH) and not os.path.exists(DIR_PROCESSED_PATH):
+
+        print(f"The {DIR_PROCESSED} directory doesn't exists.")
+        print(f"Creating the {DIR_PROCESSED} directory...")
+
+        os.mkdir(path=DIR_PROCESSED_PATH)
+
+        print(f"The {DIR_PROCESSED} directory has been created.")
+
+    elif not os.path.exists(DIR_RAW_PATH) and os.path.exists(DIR_PROCESSED_PATH):
+
+        print(f"The {DIR_RAW} directory doesn't exists.")
+        print(f"Creating the {DIR_RAW} directory...")
+
+        os.mkdir(path=DIR_RAW_PATH)
+
+        print(f"The {DIR_RAW} directory has been created.")
+
+    else:
+
+        print(f"The {DIR_DATA} directory and all it's subdirectories, {DIR_RAW} and {DIR_PROCESSED}, already exists.")
 
 def download_data() -> None:
     # Download dataset
-    os.system("kaggle datasets download -d blastchar/telco-customer-churn -p ../../data/raw")
+    os.system(f'kaggle datasets download -d blastchar/telco-customer-churn -p "{DIR_RAW_PATH}" --unzip -o')
 
-    # Unzip
-    with zipfile.ZipFile('../../data/raw/telco-customer-churn.zip', 'r') as zip_ref:
-        zip_ref.extractall('../../data/raw')
+def rename_data() -> None:
+
+    for filename in os.listdir(DIR_RAW_PATH):
+        if filename.lower().endswith("telco-customer-churn.csv"):
+            os.rename(os.path.join(DIR_RAW_PATH, filename), os.path.join(DIR_RAW_PATH, DATASET_NAME_NEW))
         
-def check_data() -> bool:
+def check_data_exists() -> bool:
     """
     Check if the dataset zip file exists in the raw data folder.
 
@@ -25,12 +76,15 @@ def check_data() -> bool:
     bool
         True if the zip file exists, False otherwise.
     """
-
-    if os.path.exists('../../data/raw/telco-customer-churn.zip'):
-        return True
-    else:
-        #print("Data not found. Run download_data() first or download it from https://www.kaggle.com/datasets/blastchar/telco-customer-churn.")
-        return False
+    check = bool()
+    for filename in os.listdir(DIR_RAW_PATH):
+        if filename.endswith(".csv"):
+            check = True
+        else:
+            #print("Data not found. Run download_data() first or download it from https://www.kaggle.com/datasets/blastchar/telco-customer-churn.")
+            check = False
+    
+    return check
     
 def load_data() -> DataFrame:
     """
@@ -41,15 +95,19 @@ def load_data() -> DataFrame:
 
     If the dataset file is not present, it will be downloaded first.
     """
-
-    if check_data():
-        return read_csv('../../data/raw/Telco-Customer-Churn.csv')
-    else:
-        print("Data not found. Downloading it...")
-        download_data()
-        return read_csv('../../data/raw/Telco-Customer-Churn.csv')
     
-def save_data(df: DataFrame) -> None:
+    check = check_data_exists()
+    if check:
+        return read_csv(os.path.join(DIR_RAW_PATH, DATASET_NAME_NEW))
+    else:
+        print("Dataset not found.\nChecking if the data folders have already been created...")
+        mk_data_dirs()
+        print("Downloading dataset...")
+        download_data()
+        rename_data()
+        return read_csv(os.path.join(DIR_RAW_PATH, DATASET_NAME_NEW))
+    
+def save_data(df: DataFrame, path: str, filename: str) -> None:
     """
     Save the dataframe to a CSV file in the raw data folder.
 
@@ -64,5 +122,8 @@ def save_data(df: DataFrame) -> None:
     -------
     None
     """
-    
-    df.to_csv('../../data/raw/Telco-Customer-Churn.csv', index=False)
+        
+    df.to_csv(os.path.join(DIR_PROCESSED_PATH, filename), index=False)
+
+if __name__ == "__main__":
+    load_data()
